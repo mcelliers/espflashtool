@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ESPFlashTool</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    .row { margin: 12px 0; }
+    button { padding: 8px 14px; }
+    pre { background: #f5f5f5; padding: 10px; height: 320px; overflow: auto; }
+    .status { margin-left: 12px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>ESPFlashTool (ESP32-S3)</h2>
+
+  <div class="row">
+    <button id="btnConnect">Connect (Select COM Port)</button>
+    <span id="status" class="status">Not connected</span>
+  </div>
+
+  <div class="row">
+    <label>BIN file:
+      <input id="binFile" type="file" accept=".bin,application/octet-stream" />
+    </label>
+  </div>
+
+  <div class="row">
+    <label>
+      <input id="chkErase" type="checkbox" />
+      Erase before flashing
+    </label>
+  </div>
+
+  <div class="row">
+    <label>Baudrate:
+      <select id="baud">
+        <option value="115200">115200</option>
+        <option value="230400">230400</option>
+        <option value="460800" selected>460800</option>
+        <option value="921600">921600</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="row">
+    <button id="btnFlash" disabled>Flash</button>
+  </div>
+
+  <pre id="log"></pre>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
