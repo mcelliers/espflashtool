@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32S3 Web Flasher</title>
+    <script src="https://unpkg.com/esptool-js@0.4.3/bundle.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        input[type="file"]:hover {
+            border-color: #764ba2;
+            background: #f0f1ff;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9ff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-group:hover {
+            background: #f0f1ff;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .checkbox-label {
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .file-info {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #e8f5e9;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #2e7d32;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .flash-button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .flash-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .flash-button:active {
+            transform: translateY(0);
+        }
+
+        .flash-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px 16px;
+            margin-top: 20px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #1565c0;
+        }
+
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 12px 16px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #e65100;
+        }
+
+        esp-web-install-button {
+            display: none;
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-message.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+            display: block;
+        }
+
+        .status-message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+            display: block;
+        }
+
+        .flash-options {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .flash-options h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ESP32S3 Web Flasher</h1>
+        <p class="subtitle">Easily program your ESP32S3 from the web browser</p>
+
+        <div class="form-group">
+            <label for="binFile">Select Firmware (.bin file)</label>
+            <input type="file" id="binFile" accept=".bin" required>
+            <div class="file-info" id="fileInfo"></div>
+        </div>
+
+        <div class="flash-options">
+            <h3>Flash Options</h3>
+            
+            <div class="form-group">
+                <label for="flashOffset">Flash Offset Address</label>
+                <select id="flashOffset">
+                    <option value="0x0">0x0 (Bootloader)</option>
+                    <option value="0x1000">0x1000 (Common)</option>
+                    <option value="0x10000" selected>0x10000 (Application - Default)</option>
+                    <option value="0x8000">0x8000 (Partition Table)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="eraseFlash" checked>
+                    <label for="eraseFlash" class="checkbox-label">Erase flash before flashing</label>
+                </div>
+            </div>
+        </div>
+
+        <button class="flash-button" id="flashButton">Connect and Flash ESP32S3</button>
+
+        <div class="status-message" id="statusMessage"></div>
+
+        <div class="info-box">
+            <strong>ℹ️ Instructions:</strong><br>
+            1. Select your firmware .bin file<br>
+            2. Choose flash offset (usually 0x10000 for applications)<br>
+            3. Optionally enable "Erase flash" to clear memory first<br>
+            4. Click "Connect and Flash ESP32S3"<br>
+            5. Select your ESP32S3's COM port from the browser dialog
+        </div>
+
+        <div class="warning-box">
+            <strong>⚠️ Requirements:</strong> This tool requires a Chromium-based browser (Chrome, Edge, Opera) with Web Serial API support.
+        </div>
+    </div>
+
+    <script>
+        const binFileInput = document.getElementById('binFile');
+        const flashButton = document.getElementById('flashButton');
+        const eraseFlashCheckbox = document.getElementById('eraseFlash');
+        const flashOffsetSelect = document.getElementById('flashOffset');
+        const fileInfo = document.getElementById('fileInfo');
+        const statusMessage = document.getElementById('statusMessage');
+
+        let selectedFile = null;
+        let esploader = null;
+        let transport = null;
+        let chip = null;
+
+        // Check if Web Serial API is supported
+        if (!('serial' in navigator)) {
+            statusMessage.textContent = '❌ Web Serial API is not supported in this browser. Please use Chrome, Edge, or Opera.';
+            statusMessage.className = 'status-message error';
+            flashButton.disabled = true;
+        }
+
+        binFileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                const sizeKB = (file.size / 1024).toFixed(2);
+                fileInfo.textContent = `✓ Selected: ${file.name} (${sizeKB} KB)`;
+                fileInfo.classList.add('show');
+                flashButton.disabled = false;
+            } else {
+                selectedFile = null;
+                fileInfo.classList.remove('show');
+                flashButton.disabled = true;
+            }
+        });
+
+        flashButton.addEventListener('click', async () => {
+            if (!selectedFile) {
+                showStatus('Please select a firmware file first.', 'error');
+                return;
+            }
+
+            try {
+                flashButton.disabled = true;
+                flashButton.textContent = 'Connecting...';
+                
+                // Request serial port
+                const port = await navigator.serial.requestPort();
+                
+                showStatus('Opening serial port...', 'success');
+                
+                // Create transport and esploader
+                transport = new esptooljs.Transport(port);
+                esploader = new esptooljs.ESPLoader({
+                    transport: transport,
+                    baudrate: 115200,
+                    terminal: {
+                        clean: () => {},
+                        writeLine: (text) => console.log(text),
+                        write: (text) => console.log(text)
+                    }
+                });
+
+                flashButton.textContent = 'Connecting to ESP32S3...';
+                
+                // Connect to ESP32
+                try {
+                    chip = await esploader.main();
+                    showStatus(`Connected! Chip: ${chip}`, 'success');
+                } catch (e) {
+                    showStatus('Failed to connect. Make sure ESP32S3 is in download mode.', 'error');
+                    throw e;
+                }
+
+                // Erase flash if checkbox is checked
+                if (eraseFlashCheckbox.checked) {
+                    flashButton.textContent = 'Erasing flash...';
+                    showStatus('Erasing flash memory...', 'success');
+                    await esploader.eraseFlash();
+                    showStatus('Flash erased successfully!', 'success');
+                }
+
+                // Read the file
+                flashButton.textContent = 'Reading firmware file...';
+                const fileData = await selectedFile.arrayBuffer();
+                const offset = parseInt(flashOffsetSelect.value);
+
+                // Flash the firmware
+                flashButton.textContent = 'Flashing firmware...';
+                showStatus(`Flashing ${selectedFile.name} at offset ${flashOffsetSelect.value}...`, 'success');
+                
+                const fileArray = [{
+                    data: new Uint8Array(fileData),
+                    address: offset
+                }];
+
+                await esploader.writeFlash({
+                    fileArray: fileArray,
+                    flashSize: 'keep',
+                    eraseAll: false,
+                    compress: true,
+                    reportProgress: (fileIndex, written, total) => {
+                        const percent = Math.round((written / total) * 100);
+                        flashButton.textContent = `Flashing... ${percent}%`;
+                    }
+                });
+
+                showStatus('✓ Firmware flashed successfully!', 'success');
+                flashButton.textContent = 'Flash Complete!';
+                
+                // Reset the device
+                await esploader.hardReset();
+
+                setTimeout(() => {
+                    flashButton.textContent = 'Connect and Flash ESP32S3';
+                    flashButton.disabled = false;
+                }, 3000);
+
+            } catch (error) {
+                console.error('Flashing error:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+                flashButton.textContent = 'Connect and Flash ESP32S3';
+                flashButton.disabled = false;
+            }
+        });
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+        }
+    </script>
+</body>
+</html>
