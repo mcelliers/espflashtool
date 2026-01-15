@@ -1,6 +1,6 @@
-import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.4.3/bundle.js";
-//Try 0.4.3 or 0.5.6 or 0.6.0
-
+import { ESPLoader, Transport } from "https://unpkg.com/esptool-js/bundle.js";
+//Try 0.4.3 or 0.5.6 or 0.5.7 // https://unpkg.com/esptool-js/bundle.js
+//import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.7/bundle.js";
 import SparkMD5 from "https://cdn.jsdelivr.net/npm/spark-md5-es@3.0.2/spark-md5.js";
 
 
