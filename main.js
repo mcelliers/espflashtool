@@ -1,4 +1,6 @@
-import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.7/bundle.js";
+import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.6.0/bundle.js";
+//Try 0.4.3 or 0.5.6 or 0.6.0
+
 import SparkMD5 from "https://cdn.jsdelivr.net/npm/spark-md5-es@3.0.2/spark-md5.js";
 
 
@@ -58,6 +60,8 @@ btnConnect.addEventListener("click", async () => {
     });
 
     setStatus("Connecting...");
+    setDot("warn");
+    setProgress(0);
 
     await loader.main();          // connect + sync + detect (typical usage)
     if (!loader.chip) {
@@ -112,6 +116,8 @@ btnFlash.addEventListener("click", async () => {
 
     const binData = new Uint8Array(await file.arrayBuffer());
 
+    log(`binData: ${binData.constructor.name}, length=${binData.length}`);
+
     log("Writing firmware (offset 0x0)...");
     await loader.writeFlash({
       fileArray: [{ data: binData, address: 0x0 }],
@@ -120,8 +126,11 @@ btnFlash.addEventListener("click", async () => {
       flashFreq: "keep",
       compress: false,
 
-      // Provide MD5 explicitly (prevents internal string-based hashing paths)
-      calculateMD5Hash: (image) => SparkMD5.ArrayBuffer.hash(image.buffer),
+        // Hash exactly the bytes in the Uint8Array
+      calculateMD5Hash: (image) =>
+        SparkMD5.ArrayBuffer.hash(
+          image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength)
+        ),
       
       reportProgress: (_i, written, total) => {
           const pct = (written / total) * 100;
@@ -132,11 +141,14 @@ btnFlash.addEventListener("click", async () => {
 
     log("Flash complete.");
     setProgress(100);
+    setDot("ok");
     setStatus("Done");
 
   } catch (err) {
     log(`ERROR: ${err?.message || err}`);
     setStatus("Failed");
+    setDot("bad");
+    setProgress(0);
   } finally {
     btnFlash.disabled = false;
   }
