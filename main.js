@@ -21,7 +21,6 @@ function setStatus(msg) {
 
 btnConnect.addEventListener("click", async () => {
   try {
-    // User MUST select the port via the browser prompt (security requirement).
     const port = await navigator.serial.requestPort();
     const transport = new Transport(port, true);
 
@@ -37,16 +36,22 @@ btnConnect.addEventListener("click", async () => {
     });
 
     setStatus("Connecting...");
-    await loader.main();
 
-    const chip = await loader.chipType();
-    log(`Detected chip: ${chip}`);
+    await loader.main();          // connect + sync + detect (typical usage)
+    if (!loader.chip) {
+      await loader.detectChip();  // fallback
+    }
 
-    // Enforce ESP32-S3
-    if (!String(chip).toLowerCase().includes("esp32-s3")) {
+    const chipName = loader.chip?.CHIP_NAME ?? "Unknown";
+    const chipDesc = loader.chip ? await loader.chip.getChipDescription(loader) : "Unknown";
+
+    log(`Detected chip: ${chipName}`);
+    log(`Chip description: ${chipDesc}`);
+
+    if (!String(chipName).toLowerCase().includes("esp32-s3")) {
       loader = null;
       btnFlash.disabled = true;
-      throw new Error(`This tool is for ESP32-S3 only. Detected: ${chip}`);
+      throw new Error(`ESP32-S3 only. Detected: ${chipName}`);
     }
 
     setStatus("Connected");
@@ -59,6 +64,7 @@ btnConnect.addEventListener("click", async () => {
     log(`ERROR: ${err?.message || err}`);
   }
 });
+
 
 btnFlash.addEventListener("click", async () => {
   if (!loader) {
