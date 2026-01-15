@@ -137,10 +137,12 @@ btnFlash.addEventListener("click", async () => {
       compress: false,
 
         // Hash exactly the bytes in the Uint8Array
-      calculateMD5Hash: (image) =>
+      /*
+        calculateMD5Hash: (image) =>
         SparkMD5.ArrayBuffer.hash(
           image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength)
         ),
+      */
       
       reportProgress: (_i, written, total) => {
           const pct = (written / total) * 100;
