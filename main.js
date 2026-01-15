@@ -1,8 +1,15 @@
-import { ESPLoader, Transport } from "https://unpkg.com/esptool-js/bundle.js";
+
+import { Buffer } from "https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm";
 //Try 0.4.3 or 0.5.6 or 0.5.7 // https://unpkg.com/esptool-js/bundle.js
 //import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.7/bundle.js";
 import SparkMD5 from "https://cdn.jsdelivr.net/npm/spark-md5-es@3.0.2/spark-md5.js";
 
+// Polyfills needed by older esptool-js bundles
+window.Buffer = Buffer;
+window.global = window;
+
+// Dynamically import esptool-js AFTER polyfills exis
+import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.4.3/bundle.js";
 
 const btnConnect = document.getElementById("btnConnect");
 const btnFlash   = document.getElementById("btnFlash");
