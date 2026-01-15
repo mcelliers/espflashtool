@@ -182,10 +182,6 @@
             color: #e65100;
         }
 
-        esp-web-install-button {
-            display: none;
-        }
-
         .status-message {
             margin-top: 15px;
             padding: 12px;
@@ -338,9 +334,16 @@
                     transport: transport,
                     baudrate: 115200,
                     terminal: {
-                        clean: () => {},
-                        writeLine: (text) => console.log(text),
-                        write: (text) => console.log(text)
+                        clean: () => {
+                            // Clear any previous messages
+                        },
+                        writeLine: (text) => {
+                            console.log('[ESP]', text);
+                            showStatus(text, 'success');
+                        },
+                        write: (text) => {
+                            console.log('[ESP]', text);
+                        }
                     }
                 });
 
@@ -393,6 +396,12 @@
                 
                 // Reset the device
                 await esploader.hardReset();
+                
+                // Clean up transport connection
+                if (transport) {
+                    await transport.disconnect();
+                    transport = null;
+                }
 
                 setTimeout(() => {
                     flashButton.textContent = 'Connect and Flash ESP32S3';
@@ -404,6 +413,27 @@
                 showStatus(`Error: ${error.message}`, 'error');
                 flashButton.textContent = 'Connect and Flash ESP32S3';
                 flashButton.disabled = false;
+                
+                // Clean up on error
+                if (transport) {
+                    try {
+                        await transport.disconnect();
+                    } catch (e) {
+                        console.error('Error disconnecting transport:', e);
+                    }
+                    transport = null;
+                }
+            }
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', async () => {
+            if (transport) {
+                try {
+                    await transport.disconnect();
+                } catch (e) {
+                    console.error('Error disconnecting transport on unload:', e);
+                }
             }
         });
 
