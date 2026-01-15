@@ -1,55 +1,321 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>QDE ESPFlashTool (Version 1)</title>
+  <title>QDE ESPFlashTool (Version 1.0.1)</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; }
-    .row { margin: 12px 0; }
-    button { padding: 8px 14px; }
-    pre { background: #f5f5f5; padding: 10px; height: 320px; overflow: auto; }
-    .status { margin-left: 12px; font-weight: bold; }
+    :root{
+      --bg: #0b1220;
+      --card: #0f1a2f;
+      --card2: #0c1629;
+      --text: #e8edf7;
+      --muted: #a7b2c7;
+      --border: rgba(255,255,255,0.10);
+      --shadow: 0 12px 35px rgba(0,0,0,0.45);
+      --radius: 14px;
+      --radius2: 10px;
+      --focus: rgba(96,165,250,0.65);
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --btn: #1f2937;
+      --btn2: #111827;
+      --btnText: #e8edf7;
+      --accent: #60a5fa;
+    }
+
+    * { box-sizing: border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1100px 700px at 20% 10%, rgba(96,165,250,0.25), transparent 60%),
+                  radial-gradient(900px 600px at 90% 25%, rgba(34,197,94,0.12), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+      padding: 28px 16px;
+    }
+
+    .wrap{ max-width: 1020px; margin: 0 auto; }
+
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom: 16px;
+    }
+
+    .title{
+      margin:0;
+      font-size: 22px;
+      letter-spacing: 0.2px;
+    }
+    .subtitle{
+      margin: 6px 0 0 0;
+      color: var(--muted);
+      line-height: 1.35;
+      font-size: 13.5px;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      font-size: 12.5px;
+      white-space: nowrap;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:50%;
+      background: var(--bad);
+      box-shadow: 0 0 0 4px rgba(239,68,68,0.15);
+    }
+    .dot.ok{
+      background: var(--ok);
+      box-shadow: 0 0 0 4px rgba(34,197,94,0.15);
+    }
+    .dot.warn{
+      background: var(--warn);
+      box-shadow: 0 0 0 4px rgba(245,158,11,0.18);
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 0;
+    }
+    @media (max-width: 920px){
+      .grid{ grid-template-columns: 1fr; }
+      .topbar{ flex-direction: column; align-items: stretch; }
+    }
+
+    .panel{
+      padding: 18px 18px 16px 18px;
+      background: rgba(15,26,47,0.62);
+    }
+    .panel.right{
+      border-left: 1px solid var(--border);
+      background: rgba(12,22,41,0.62);
+    }
+    @media (max-width: 920px){
+      .panel.right{ border-left: none; border-top: 1px solid var(--border); }
+    }
+
+    .section-title{
+      margin: 0 0 10px 0;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .row{ display:flex; gap: 10px; align-items:center; margin: 10px 0; }
+    .row.stack{ flex-direction: column; align-items: stretch; gap: 8px; }
+
+    label{ font-size: 13.5px; color: var(--muted); }
+    input[type="file"], select{
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: var(--radius2);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.20);
+      color: var(--text);
+      outline: none;
+    }
+    input[type="file"]::file-selector-button{
+      margin-right: 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .check{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius2);
+      background: rgba(0,0,0,0.15);
+    }
+    .check input{ width: 16px; height: 16px; }
+
+    button{
+      appearance: none;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05));
+      color: var(--btnText);
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.06s ease, background 0.2s ease, opacity 0.2s ease;
+      font-weight: 600;
+    }
+    button:hover{ background: rgba(255,255,255,0.10); }
+    button:active{ transform: translateY(1px); }
+    button:disabled{ opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary{
+      background: linear-gradient(180deg, rgba(96,165,250,0.35), rgba(96,165,250,0.18));
+      border-color: rgba(96,165,250,0.55);
+    }
+    .btn-primary:hover{ background: rgba(96,165,250,0.30); }
+
+    .hint{
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.35;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius2);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.15);
+    }
+
+    .progress-wrap{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin: 10px 0 12px 0;
+    }
+    .progress{
+      flex:1;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid var(--border);
+      overflow:hidden;
+    }
+    .bar{
+      width: 0%;
+      height:100%;
+      background: linear-gradient(90deg, rgba(96,165,250,0.95), rgba(34,197,94,0.85));
+      border-radius: 999px;
+      transition: width 0.15s ease;
+    }
+    .pct{
+      width: 54px;
+      text-align:right;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      font-size: 12.5px;
+    }
+
+    pre{
+      margin:0;
+      height: 360px;
+      overflow:auto;
+      padding: 12px;
+      border-radius: var(--radius2);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.25);
+      color: #d7e1f3;
+      font-size: 12.5px;
+      line-height: 1.35;
+      white-space: pre-wrap;
+    }
+
+    .footer{
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+    }
+
+    /* Focus states */
+    button:focus, input:focus, select:focus{
+      box-shadow: 0 0 0 4px var(--focus);
+      border-color: rgba(96,165,250,0.6);
+    }
   </style>
 </head>
+
 <body>
-  <h2>QDE ESPFlash Tool (ESP32-S3)</h2>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h2 class="title">QDE ESPFlashTool (ESP32-S3)</h2>
+        <p class="subtitle">
+          Use Chrome or Edge. Connect the device via USB, select the COM port when prompted, then choose a merged ESP-IDF BIN.
+        </p>
+      </div>
 
-  <div class="row">
-    <button id="btnConnect">Connect (Select COM Port)</button>
-    <span id="status" class="status">Not connected</span>
+      <div class="badge">
+        <span id="statusDot" class="dot"></span>
+        <span id="status">Not connected</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="grid">
+        <!-- Left: Controls -->
+        <div class="panel">
+          <div class="section-title">Device & Flashing</div>
+
+          <div class="row">
+            <button id="btnConnect" class="btn-primary">Connect (Select COM Port)</button>
+            <button id="btnFlash" disabled>Flash</button>
+          </div>
+
+          <div class="row stack">
+            <label for="binFile">Firmware (merged .bin)</label>
+            <input id="binFile" type="file" accept=".bin,application/octet-stream" />
+          </div>
+
+          <div class="row">
+            <div class="check" style="flex:1;">
+              <input id="chkErase" type="checkbox" />
+              <label for="chkErase" style="color: var(--text); margin:0;">Erase before flashing</label>
+            </div>
+          </div>
+
+          <div class="row stack">
+            <label for="baud">Baudrate</label>
+            <select id="baud">
+              <option value="115200">115200</option>
+              <option value="230400">230400</option>
+              <option value="460800" selected>460800</option>
+              <option value="921600">921600</option>
+            </select>
+          </div>
+
+          <div class="hint">
+            If flashing fails, put the device into bootloader mode (often holding BOOT while pressing RESET), then try Connect again.
+          </div>
+        </div>
+
+        <!-- Right: Progress & Log -->
+        <div class="panel right">
+          <div class="section-title">Progress & Log</div>
+
+          <div class="progress-wrap">
+            <div class="progress"><div id="progressBar" class="bar"></div></div>
+            <div id="progressPct" class="pct">0%</div>
+          </div>
+
+          <pre id="log"></pre>
+
+          <div class="footer">Quantum Design and Engineering (PTY) Ltd</div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./main.js?v=1"></script>
   </div>
-
-  <div class="row">
-    <label>BIN file:
-      <input id="binFile" type="file" accept=".bin,application/octet-stream" />
-    </label>
-  </div>
-
-  <div class="row">
-    <label>
-      <input id="chkErase" type="checkbox" />
-      Erase before flashing
-    </label>
-  </div>
-
-  <div class="row">
-    <label>Baudrate:
-      <select id="baud">
-        <option value="115200">115200</option>
-        <option value="230400">230400</option>
-        <option value="460800" selected>460800</option>
-        <option value="921600">921600</option>
-      </select>
-    </label>
-  </div>
-
-  <div class="row">
-    <button id="btnFlash" disabled>Flash</button>
-  </div>
-
-  <pre id="log"></pre>
-
-  <script type="module" src="./main.js"></script>
 </body>
 </html>
