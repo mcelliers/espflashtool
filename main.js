@@ -1,4 +1,6 @@
 import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.7/bundle.js";
+import SparkMD5 from "https://cdn.jsdelivr.net/npm/spark-md5-es@3.0.2/spark-md5.js";
+
 
 const btnConnect = document.getElementById("btnConnect");
 const btnFlash   = document.getElementById("btnFlash");
@@ -8,7 +10,26 @@ const binInput   = document.getElementById("binFile");
 const chkErase   = document.getElementById("chkErase");
 const baudSel    = document.getElementById("baud");
 
+const statusDot = document.getElementById("statusDot");
+const progressBar = document.getElementById("progressBar");
+const progressPct = document.getElementById("progressPct");
+
 let loader = null;
+
+function setDot(state) {
+  // state: "bad" | "warn" | "ok"
+  statusDot.classList.remove("ok", "warn");
+  if (state === "ok") statusDot.classList.add("ok");
+  else if (state === "warn") statusDot.classList.add("warn");
+  // default is red (bad)
+}
+
+function setProgress(pct) {
+  const clamped = Math.max(0, Math.min(100, pct));
+  progressBar.style.width = `${clamped}%`;
+  progressPct.textContent = `${clamped.toFixed(1)}%`;
+}
+
 
 function log(msg) {
   logEl.textContent += msg + "\n";
@@ -18,6 +39,7 @@ function log(msg) {
 function setStatus(msg) {
   statusEl.textContent = msg;
 }
+
 
 btnConnect.addEventListener("click", async () => {
   try {
@@ -96,14 +118,20 @@ btnFlash.addEventListener("click", async () => {
       flashSize: "keep",
       flashMode: "keep",
       flashFreq: "keep",
-      compress: true,
+      compress: false,
+
+      // Provide MD5 explicitly (prevents internal string-based hashing paths)
+      calculateMD5Hash: (image) => SparkMD5.ArrayBuffer.hash(image.buffer),
+      
       reportProgress: (_i, written, total) => {
-        const pct = ((written / total) * 100).toFixed(1);
-        setStatus(`Flashing... ${pct}%`);
-      },
+          const pct = (written / total) * 100;
+          setProgress(pct);
+          setStatus(`Flashing... ${pct.toFixed(1)}%`);
+        },
     });
 
     log("Flash complete.");
+    setProgress(100);
     setStatus("Done");
 
   } catch (err) {
