@@ -121,8 +121,11 @@ btnFlash.addEventListener("click", async () => {
       log("Erase complete.");
     }
 
-    const binData = new Uint8Array(await file.arrayBuffer());
-
+     // const binData = new Uint8Array(await file.arrayBuffer());
+    const binBytes = new Uint8Array(await file.arrayBuffer());
+    // Convert bytes -> "binary string" where each char code is one byte (0..255)
+    const binData = new TextDecoder("latin1").decode(binBytes);
+    
     log(`binData: ${binData.constructor.name}, length=${binData.length}`);
 
     log("Writing firmware (offset 0x0)...");
