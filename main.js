@@ -1,59 +1,76 @@
-
-import { Buffer } from "https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm";
-//Try 0.4.3 or 0.5.6 or 0.5.7 // https://unpkg.com/esptool-js/bundle.js
-//import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.7/bundle.js";
-import SparkMD5 from "https://cdn.jsdelivr.net/npm/spark-md5-es@3.0.2/spark-md5.js";
-
-// Polyfills needed by older esptool-js bundles
-window.Buffer = Buffer;
-window.global = window;
-
-// Dynamically import esptool-js AFTER polyfills exis
-import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.4.3/bundle.js";
+import { ESPLoader, Transport } from "esptool-js";
 
 const btnConnect = document.getElementById("btnConnect");
 const btnFlash   = document.getElementById("btnFlash");
+const btnDisconnect = document.getElementById("btnDisconnect");
+const btnReset = document.getElementById("btnReset");
 const statusEl   = document.getElementById("status");
 const logEl      = document.getElementById("log");
 const binInput   = document.getElementById("binFile");
 const chkErase   = document.getElementById("chkErase");
 const baudSel    = document.getElementById("baud");
 
-const statusDot = document.getElementById("statusDot");
+const statusDot   = document.getElementById("statusDot");
 const progressBar = document.getElementById("progressBar");
 const progressPct = document.getElementById("progressPct");
 
 let loader = null;
-
-function setDot(state) {
-  // state: "bad" | "warn" | "ok"
-  statusDot.classList.remove("ok", "warn");
-  if (state === "ok") statusDot.classList.add("ok");
-  else if (state === "warn") statusDot.classList.add("warn");
-  // default is red (bad)
-}
-
-function setProgress(pct) {
-  const clamped = Math.max(0, Math.min(100, pct));
-  progressBar.style.width = `${clamped}%`;
-  progressPct.textContent = `${clamped.toFixed(1)}%`;
-}
-
+let transport = null;
 
 function log(msg) {
   logEl.textContent += msg + "\n";
   logEl.scrollTop = logEl.scrollHeight;
 }
+function setStatus(msg) { statusEl.textContent = msg; }
 
-function setStatus(msg) {
-  statusEl.textContent = msg;
+function setDot(state) {
+  statusDot.classList.remove("ok", "warn");
+  if (state === "ok") statusDot.classList.add("ok");
+  else if (state === "warn") statusDot.classList.add("warn");
+  // default: red
+}
+function setProgress(pct) {
+  const c = Math.max(0, Math.min(100, pct));
+  progressBar.style.width = `${c}%`;
+  progressPct.textContent = `${c.toFixed(1)}%`;
 }
 
+async function safeDisconnect() {
+  try {
+    if (transport) {
+      // Close the serial port cleanly
+      await transport.disconnect();
+    } else if (loader?.transport) {
+      // Fallback: some versions expose it here
+      await loader.transport.disconnect();
+    }
+  } catch (e) {
+    // Ignore disconnect errors; we want UI to recover regardless
+    log(`Disconnect warning: ${e?.message || e}`);
+  } finally {
+    loader = null;
+    transport = null;
+
+    btnFlash.disabled = true;
+    btnDisconnect.disabled = true;
+    btnReset.disabled = true;
+
+    setDot("bad");
+    setProgress(0);
+    setStatus("Not connected");
+    log("Disconnected.");
+  }
+}
 
 btnConnect.addEventListener("click", async () => {
+  btnConnect.disabled = true;
   try {
+    setDot("warn");
+    setProgress(0);
+    setStatus("Select COM port...");
+
     const port = await navigator.serial.requestPort();
-    const transport = new Transport(port, true);
+    transport = new Transport(port, true);
 
     const baudrate = Number(baudSel.value);
     loader = new ESPLoader({
@@ -67,14 +84,9 @@ btnConnect.addEventListener("click", async () => {
     });
 
     setStatus("Connecting...");
-    setDot("warn");
-    setProgress(0);
+    await loader.main();
 
-    await loader.main();          // connect + sync + detect (typical usage)
-    if (!loader.chip) {
-      await loader.detectChip();  // fallback
-    }
-
+    if (!loader.chip) await loader.detectChip();
     const chipName = loader.chip?.CHIP_NAME ?? "Unknown";
     const chipDesc = loader.chip ? await loader.chip.getChipDescription(loader) : "Unknown";
 
@@ -84,35 +96,48 @@ btnConnect.addEventListener("click", async () => {
     if (!String(chipName).toLowerCase().includes("esp32-s3")) {
       loader = null;
       btnFlash.disabled = true;
+      setDot("bad");
       throw new Error(`ESP32-S3 only. Detected: ${chipName}`);
     }
 
+    setDot("ok");
     setStatus("Connected");
+    btnDisconnect.disabled = false;
+    btnReset.disabled = false;
     btnFlash.disabled = false;
-
   } catch (err) {
     loader = null;
     btnFlash.disabled = true;
+    setDot("bad");
     setStatus("Not connected");
+    btnDisconnect.disabled = true;
+    btnReset.disabled = true;
     log(`ERROR: ${err?.message || err}`);
+  } finally {
+    btnConnect.disabled = false;
   }
 });
 
+btnDisconnect.addEventListener("click", async () => {
+  btnDisconnect.disabled = true;
+  btnReset.disabled = true;
+  btnFlash.disabled = true;
+  await safeDisconnect();
+});
 
 btnFlash.addEventListener("click", async () => {
-  if (!loader) {
-    log("Not connected.");
-    return;
-  }
+  if (!loader) { log("Not connected."); return; }
 
   const file = binInput.files?.[0];
-  if (!file) {
-    log("Please choose a .bin file first.");
-    return;
-  }
+  if (!file) { log("Please choose a .bin file first."); return; }
+
+  btnFlash.disabled = true;
+  btnConnect.disabled = true;
+  btnReset.disabled = true;
 
   try {
-    btnFlash.disabled = true;
+    setDot("warn");
+    setProgress(0);
     setStatus("Flashing...");
 
     if (chkErase.checked) {
@@ -121,12 +146,8 @@ btnFlash.addEventListener("click", async () => {
       log("Erase complete.");
     }
 
-     // const binData = new Uint8Array(await file.arrayBuffer());
-    const binBytes = new Uint8Array(await file.arrayBuffer());
-    // Convert bytes -> "binary string" where each char code is one byte (0..255)
-    const binData = new TextDecoder("latin1").decode(binBytes);
-    
-    log(`binData: ${binData.constructor.name}, length=${binData.length}`);
+    const binData = new Uint8Array(await file.arrayBuffer());
+    log(`Firmware loaded: ${binData.length} bytes`);
 
     log("Writing firmware (offset 0x0)...");
     await loader.writeFlash({
@@ -134,33 +155,64 @@ btnFlash.addEventListener("click", async () => {
       flashSize: "keep",
       flashMode: "keep",
       flashFreq: "keep",
-      compress: false,
-
-        // Hash exactly the bytes in the Uint8Array
-      
-      //  calculateMD5Hash: (image) =>
-      //  SparkMD5.ArrayBuffer.hash(
-      //     image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength)
-      //   ),
-     
+      compress: true,     // start with true (fast, widely used)
+      eraseAll: false,
       reportProgress: (_i, written, total) => {
-          const pct = (written / total) * 100;
-          setProgress(pct);
-          setStatus(`Flashing... ${pct.toFixed(1)}%`);
-        },
+        const pct = (written / total) * 100;
+        setProgress(pct);
+        setStatus(`Flashing... ${pct.toFixed(1)}%`);
+      },
     });
 
-    log("Flash complete.");
     setProgress(100);
     setDot("ok");
     setStatus("Done");
-
+    log("Flash complete.");
   } catch (err) {
-    log(`ERROR: ${err?.message || err}`);
-    setStatus("Failed");
     setDot("bad");
-    setProgress(0);
+    setStatus("Failed");
+    log(`ERROR: ${err?.message || err}`);
   } finally {
     btnFlash.disabled = false;
+    btnConnect.disabled = false;
+    btnReset.disabled = false;
+  }
+});
+
+btnReset.addEventListener("click", async () => {
+  if (!loader && !transport) {
+    log("Not connected.");
+    return;
+  }
+
+  try {
+    setDot("warn");
+    setStatus("Resetting...");
+
+    // Preferred: if loader provides a reset method (most robust)
+    if (typeof loader?.hardReset === "function") {
+      await loader.hardReset();
+      log("Reset requested (loader.hardReset).");
+    } else if (typeof loader?.reset === "function") {
+      await loader.reset();
+      log("Reset requested (loader.reset).");
+    } else if (transport?.device?.setSignals) {
+      // Fallback: toggle DTR/RTS (works on many USB-serial bridges)
+      // Typical pattern: pulse RTS low/high briefly.
+      await transport.device.setSignals({ dataTerminalReady: false, requestToSend: true });
+      await new Promise(r => setTimeout(r, 100));
+      await transport.device.setSignals({ dataTerminalReady: false, requestToSend: false });
+      log("Reset attempted via DTR/RTS toggle.");
+    } else {
+      // Last resort: close and reconnect manually
+      log("Reset not supported on this device/driver. Unplug/replug or press RESET on the board.");
+    }
+
+    setDot("ok");
+    setStatus("Connected");
+  } catch (err) {
+    setDot("bad");
+    setStatus("Connected (reset failed)");
+    log(`Reset ERROR: ${err?.message || err}`);
   }
 });
