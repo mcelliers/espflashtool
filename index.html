@@ -88,11 +88,14 @@
   <span>
     © <span id="year"></span> Quantum Design and Engineering (PTY) Ltd —
     <a href="https://www.qde.co.za" target="_blank" rel="noopener">www.qde.co.za</a>
+    · <span id="appVersion"></span>
   </span>
 </footer>
 
 <script>
+  import { APP_VERSION } from "/main.js";
   document.getElementById("year").textContent = new Date().getFullYear();
+  document.getElementById("appVersion").textContent = `v${APP_VERSION}`;
 </script>
 
 <body>

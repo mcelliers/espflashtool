@@ -1,3 +1,5 @@
+export const APP_VERSION = "1.0.3";
+console.info(`ESPFlashTool version ${APP_VERSION}`);
 import { ESPLoader, Transport } from "esptool-js";
 
 const btnConnect = document.getElementById("btnConnect");
